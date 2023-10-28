@@ -3,19 +3,40 @@ const fs = require("fs").promises;
 async function main() {
   let majors = ["engineering/computer-science"];
 
+  let profData = {};
+  let gpaData = {};
+  let courseData = [];
+
   let courseResp = await fetch(`https://catalog.tamu.edu/undergraduate/${majors[0]}/bs`).then(res => res.text());
 
   courseResp = courseResp.replace(/>(\s|\n)+?</g, "><");
 
-  let matches = [...courseResp.matchAll(/<td[^<>]+?>(<div style="margin-left:20px;" class="blockindent">)?<a [^<>]+? class="bubblelink code".+?>(.+?)<\/a>/g)];
+  let matches = [...courseResp.matchAll(/(?:(?:<td[^<>]+?>)|(?:<br\/>))(<div style="margin-left:20px;" class="blockindent">)?(or )?<a [^<>]+? class="bubblelink code".+?>(.+?)<\/a>/g)];
 
-  console.log(matches.map(x => [x[2], x[1].includes("blockindent")]));
+  let courseDataPre = matches.map(m => [
+    m[3],
+    m[1] !== undefined && m[1].includes("blockindent"),
+    m[2] !== undefined && m[2].includes("or")
+  ]).map((a, i, orig) => [
+    a[0],
+    a[1] || (orig[i + 1] !== undefined && orig[i + 1][2])
+  ]);
+
+  for (let i = 0, j = -1; i < courseDataPre.length; i++) {
+    if (i != 0 && courseDataPre[i][1] === true && courseDataPre[i - 1][1] === true) {
+      // no-op
+    }
+    else {
+      j++;
+    }
+    if (courseData[j] === undefined) courseData[j] = [courseDataPre[i][0]];
+    else courseData[j].push(courseDataPre[i][0]);
+  }
+
+  console.log(courseData);
 
   let profNames = ["Philip Ritchey", "Robert Lightfoot"];
   let courses = ["ENGR 102", "CSCE 121", "CSCE 221"];
-
-  let profData = {};
-  let gpaData = {};
 
   let queryTemplate =
   `query NewSearchTeachersQuery(
