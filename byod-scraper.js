@@ -1,7 +1,11 @@
 const fs = require("fs").promises;
 
 async function main() {
-  let profNames = ["Philip Ritchey"];
+  let profNames = ["Philip Ritchey", "Robert Lightfoot"];
+  let courses = ["ENGR 102", "CSCE 121", "CSCE 221"];
+
+  let profData = {};
+  let gpaData = {};
 
   let queryTemplate =
   `query NewSearchTeachersQuery(
@@ -53,17 +57,6 @@ async function main() {
   }`;
 
   for (let i = 0; i < profNames.length; i++) {
-    // let cookieResponse = await fetch("https://www.ratemyprofessors.com/", {
-    //   method: "GET",
-    //   headers: {
-    //     "Host": "www.ratemyprofessors.com",
-    //     "Origin": "https://www.ratemyprofessors.com",
-    //     "Referer": "https://www.ratemyprofessors.com/"
-    //   },
-    // });
-    // let cookie = cookieResponse.headers;
-    // console.log(cookie);
-    // return;
     let idReq = {
       query: queryTemplate,
       variables: {
@@ -73,7 +66,7 @@ async function main() {
         }
       }
     };
-    let response = await fetch("https://www.ratemyprofessors.com/graphql", {
+    let rmpData = await fetch("https://www.ratemyprofessors.com/graphql", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -85,9 +78,33 @@ async function main() {
         "Authorization": "Basic dGVzdDp0ZXN0"
       },
       body: JSON.stringify(idReq)
-    }).then(res => res.text());
-    console.log(response);
+    }).then(res => res.json());
+    let edges = rmpData.data.newSearch.teachers.edges;
+    for (let i in Object.keys(rmpData.data.newSearch.teachers.edges)) {
+      if (edges[i].node.school.id != btoa("School-1003")) {
+        delete edges[i];
+      }
+    }
+    profData[profNames[i]] = rmpData;
   }
+
+  for (let i = 0; i < courses.length; i++) {
+    let course = courses[i].split(" ");
+    let anexData = await fetch(`https://anex.us/grades/getData/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Host": "anex.us",
+        "Origin": "https://anex.us",
+        "Referer": "https://anex.us/grades/"
+      },
+      body: `dept=${course[0]}&number=${course[1]}`
+    }).then(res => res.json());
+    gpaData[courses[i]] = anexData;
+  }
+
+  await fs.writeFile("prof-data.json", JSON.stringify(profData, null, 2));
+  await fs.writeFile("gpa-data.json", JSON.stringify(gpaData, null, 2));
 }
 
 main();
