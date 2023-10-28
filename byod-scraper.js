@@ -1,6 +1,16 @@
 const fs = require("fs").promises;
 
 async function main() {
+  let majors = ["engineering/computer-science"];
+
+  let courseResp = await fetch(`https://catalog.tamu.edu/undergraduate/${majors[0]}/bs`).then(res => res.text());
+
+  courseResp = courseResp.replace(/>(\s|\n)+?</g, "><");
+
+  let matches = [...courseResp.matchAll(/<td[^<>]+?>(<div style="margin-left:20px;" class="blockindent">)?<a [^<>]+? class="bubblelink code".+?>(.+?)<\/a>/g)];
+
+  console.log(courseResp);
+
   let profNames = ["Philip Ritchey", "Robert Lightfoot"];
   let courses = ["ENGR 102", "CSCE 121", "CSCE 221"];
 
