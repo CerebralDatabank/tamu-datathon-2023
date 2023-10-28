@@ -9,7 +9,7 @@ async function main() {
 
   let matches = [...courseResp.matchAll(/<td[^<>]+?>(<div style="margin-left:20px;" class="blockindent">)?<a [^<>]+? class="bubblelink code".+?>(.+?)<\/a>/g)];
 
-  console.log(courseResp);
+  console.log(matches.map(x => [x[2], x[1].includes("blockindent")]));
 
   let profNames = ["Philip Ritchey", "Robert Lightfoot"];
   let courses = ["ENGR 102", "CSCE 121", "CSCE 221"];
