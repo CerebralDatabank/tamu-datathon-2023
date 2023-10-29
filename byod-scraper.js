@@ -7,7 +7,11 @@ async function main() {
   let gpaData = {};
   let courseData = [];
 
+  console.log("Starting...");
+
   let courseResp = await fetch(`https://catalog.tamu.edu/undergraduate/${majors[0]}/bs`).then(res => res.text());
+
+  console.log("Course data obtained");
 
   courseResp = courseResp.replace(/>(\s|\n)+?</g, "><");
 
@@ -43,10 +47,43 @@ async function main() {
     }
   }
 
-  console.log(courseData);
+  for (let i = 0; i < courseData.length; i++) {
+    for (let j = 0; j < courseData[i].length; j++) {
+      courseData[i][j] = courseData[i][j].replace(/\u00A0/g, " ");
+    }
+  }
 
-  let profNames = ["Philip Ritchey", "Robert Lightfoot"];
-  let courses = ["ENGR 102", "CSCE 121", "CSCE 221"];
+  let courses = courseData.flat();
+
+  console.log(`${courses.length} courses obtained`);
+
+  let profNames = [];
+
+  for (let i = 0; i < courses.length; i++) {
+    let course = courses[i].split(" ");
+    let anexData = await fetch(`https://anex.us/grades/getData/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Host": "anex.us",
+        "Origin": "https://anex.us",
+        "Referer": "https://anex.us/grades/"
+      },
+      body: `dept=${course[0]}&number=${course[1]}`
+    }).then(res => res.text());
+    // case: {"classes":]}
+    if (anexData.length <= 16) continue;
+    anexData = JSON.parse(anexData);
+    gpaData[courses[i]] = anexData;
+
+    for (let entry of anexData.classes) {
+      profNames.push(entry.prof);
+    }
+
+    console.log(`Processed course #${i}: ${courses[i]}`);
+  }
+
+  console.log(`${profNames.length} professors obtained`);
 
   let queryTemplate = `query NewSearchTeachersQuery(\n  $query: TeacherSearchQuery!\n) {\n  newSearch {\n    teachers(query: $query) {\n      didFallback\n      edges {\n        cursor\n        node {\n          id\n          legacyId\n          firstName\n          lastName\n          department\n          school {\n            legacyId\n            name\n            id\n          }\n          avgRating\n          numRatings\n          wouldTakeAgainPercentRounded\n          mandatoryAttendance {\n            yes\n            no\n            neither\n            total\n          }\n          takenForCredit {\n            yes\n            no\n            neither\n            total\n          }\n          ratingsDistribution {\n            total\n            r1\n            r2\n            r3\n            r4\n            r5\n          }\n        }\n      }\n    }\n  }\n}`;
 
@@ -74,32 +111,24 @@ async function main() {
       body: JSON.stringify(idReq)
     }).then(res => res.json());
     let edges = rmpData.data.newSearch.teachers.edges;
-    for (let i in Object.keys(rmpData.data.newSearch.teachers.edges)) {
+    for (let i in Object.keys(edges)) {
       if (edges[i].node.school.id != btoa("School-1003")) {
         delete edges[i];
       }
     }
     profData[profNames[i]] = rmpData;
+
+    let node = rmpData.data.newSearch.teachers.edges[0]?.node ?? {firstName: "Unknown", lastName: "Name"};
+    console.log(`Processed professor/section #${i}: ${profNames[i]} (${node.firstName} ${node.lastName})`);
   }
 
-  for (let i = 0; i < courses.length; i++) {
-    let course = courses[i].split(" ");
-    let anexData = await fetch(`https://anex.us/grades/getData/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Host": "anex.us",
-        "Origin": "https://anex.us",
-        "Referer": "https://anex.us/grades/"
-      },
-      body: `dept=${course[0]}&number=${course[1]}`
-    }).then(res => res.json());
-    gpaData[courses[i]] = anexData;
-  }
+  console.log(`${Object.keys(profData).length} professors obtained`);
 
-  await fs.writeFile("course-data.json", JSON.stringify(courseData, null, 2));
-  await fs.writeFile("prof-data.json", JSON.stringify(profData, null, 2));
-  await fs.writeFile("gpa-data.json", JSON.stringify(gpaData, null, 2));
+  await fs.writeFile("course-data.json", JSON.stringify(courseData, null, 2), "utf8");
+  await fs.writeFile("prof-data.json", JSON.stringify(profData, null, 2), "utf8");
+  await fs.writeFile("gpa-data.json", JSON.stringify(gpaData, null, 2), "utf8");
+
+  console.log(`Files written; done`);
 }
 
 main();
