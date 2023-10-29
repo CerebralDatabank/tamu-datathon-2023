@@ -1,15 +1,15 @@
 const fs = require("fs").promises;
 
-async function main() {
-  let majors = ["engineering/computer-science"];
+let major = "engineering/computer-science";
 
+async function main() {
   let profData = {};
   let gpaData = {};
   let courseData = [];
 
   console.log("Starting...");
 
-  let courseResp = await fetch(`https://catalog.tamu.edu/undergraduate/${majors[0]}/bs`).then(res => res.text());
+  let courseResp = await fetch(`https://catalog.tamu.edu/undergraduate/${major}/bs`).then(res => res.text());
 
   console.log("Course data obtained");
 
