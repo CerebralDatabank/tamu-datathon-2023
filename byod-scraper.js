@@ -33,59 +33,22 @@ async function main() {
     else courseData[j].push(courseDataPre[i][0]);
   }
 
+  for (let i = 0; i < courseData.length; i++) {
+    for (let j = 0; j < courseData[i].length; j++) {
+      if (courseData[i][j].includes("/")) {
+        let pair = courseData[i][j].split("/");
+        courseData[i][j] = pair[0];
+        courseData[i].splice(j + 1, 0, pair[1]);
+      }
+    }
+  }
+
   console.log(courseData);
 
   let profNames = ["Philip Ritchey", "Robert Lightfoot"];
   let courses = ["ENGR 102", "CSCE 121", "CSCE 221"];
 
-  let queryTemplate =
-  `query NewSearchTeachersQuery(
-    $query: TeacherSearchQuery!
-  ) {
-    newSearch {
-      teachers(query: $query) {
-        didFallback
-        edges {
-          cursor
-          node {
-            id
-            legacyId
-            firstName
-            lastName
-            department
-            school {
-              legacyId
-              name
-              id
-            }
-            avgRating
-            numRatings
-            wouldTakeAgainPercentRounded
-            mandatoryAttendance {
-              yes
-              no
-              neither
-              total
-            }
-            takenForCredit {
-              yes
-              no
-              neither
-              total
-            }
-            ratingsDistribution {
-              total
-              r1
-              r2
-              r3
-              r4
-              r5
-            }
-          }
-        }
-      }
-    }
-  }`;
+  let queryTemplate = `query NewSearchTeachersQuery(\n  $query: TeacherSearchQuery!\n) {\n  newSearch {\n    teachers(query: $query) {\n      didFallback\n      edges {\n        cursor\n        node {\n          id\n          legacyId\n          firstName\n          lastName\n          department\n          school {\n            legacyId\n            name\n            id\n          }\n          avgRating\n          numRatings\n          wouldTakeAgainPercentRounded\n          mandatoryAttendance {\n            yes\n            no\n            neither\n            total\n          }\n          takenForCredit {\n            yes\n            no\n            neither\n            total\n          }\n          ratingsDistribution {\n            total\n            r1\n            r2\n            r3\n            r4\n            r5\n          }\n        }\n      }\n    }\n  }\n}`;
 
   for (let i = 0; i < profNames.length; i++) {
     let idReq = {
@@ -134,6 +97,7 @@ async function main() {
     gpaData[courses[i]] = anexData;
   }
 
+  await fs.writeFile("course-data.json", JSON.stringify(courseData, null, 2));
   await fs.writeFile("prof-data.json", JSON.stringify(profData, null, 2));
   await fs.writeFile("gpa-data.json", JSON.stringify(gpaData, null, 2));
 }
